@@ -17,14 +17,18 @@ pacman-key --init && pacman-key --populate archlinux
 pacman -Syu --noconfirm
 
 # Install necessary packages for the next actions
-pacman -S wget sudo git --noconfirm
+pacman -S --needed wget sudo git --noconfirm
 
-# Create user astronaut with home, add it to wheel
-useradd -G wheel -m astronaut
-echo "astronaut:astro" | chpasswd
+# Create user astronaut with home, add it to wheel if it doesn't exist
+if ! id "astronaut" &>/dev/null; then
+    useradd -G wheel -m astronaut
+    echo "astronaut:astro" | chpasswd
+fi
 
 # Pull the brain repo, this will be used for scripting out the final image
-su astronaut -c "git clone https://github.com/devDucks/astroarch.git /home/astronaut/.astroarch"
+if [ ! -d "/home/astronaut/.astroarch" ]; then
+    su astronaut -c "git clone https://github.com/devDucks/astroarch.git /home/astronaut/.astroarch"
+fi
 
 # Uncomment en_US UTF8 and generate locale files
 sed -i -e 's/#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/g' /etc/locale.gen
@@ -72,26 +76,28 @@ sed -i 's/#X11DisplayOffset 10/X11DisplayOffset 10/g' /etc/ssh/sshd_config
 sed -i 's/#X11UseLocalhost yes/X11UseLocalhost yes/g' /etc/ssh/sshd_config
 
 # Make all necessary folders
-mkdir /etc/sddm.conf.d
+mkdir -p /etc/sddm.conf.d
 su astronaut -c "mkdir -p /home/astronaut/.config"
 su astronaut -c "mkdir -p /home/astronaut/Pictures/wallpapers"
 su astronaut -c "mkdir -p /home/astronaut/Desktop"
 
 # Install oh-my-zsh and set the default shell to zsh
-chsh -s /usr/bin/zsh astronaut
-rm /home/astronaut/.bash*
-cd /home/astronaut
-ZSH=/home/astronaut/.oh-my-zsh sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-chown astronaut:astronaut .oh-my-zsh/
+if [ ! -d "/home/astronaut/.oh-my-zsh" ]; then
+    chsh -s /usr/bin/zsh astronaut
+    rm -rf /home/astronaut/.bash*
+    cd /home/astronaut
+    ZSH=/home/astronaut/.oh-my-zsh sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+    chown astronaut:astronaut .oh-my-zsh/
+fi
 
 # Set the samba pass
-ln -s /home/astronaut/.astroarch/configs/smb.conf /etc/samba/smb.conf
+ln -sf /home/astronaut/.astroarch/configs/smb.conf /etc/samba/smb.conf
 systemctl start smb
-(echo astro; echo astro) | smbpasswd -s -a astronaut
+(echo astro; echo astro) | smbpasswd -s -a astronaut || true
 systemctl stop smb
 
 # Link a zsh config for astronaut
-ln -s /home/astronaut/.astroarch/configs/.zshrc /home/astronaut/.zshrc
+ln -sf /home/astronaut/.astroarch/configs/.zshrc /home/astronaut/.zshrc
 
 # Start NetworkManager and sleep to create the hotspot
 systemctl start NetworkManager
@@ -105,29 +111,29 @@ systemctl disable systemd-timesyncd
 systemctl enable chronyd
 
 # Symlink now files
-ln -s /home/astronaut/.astroarch/configs/kde_settings.conf /etc/sddm.conf.d/kde_settings.conf
-ln -s /home/astronaut/.astroarch/systemd/novnc.service /usr/lib/systemd/system/novnc.service
-ln -s /home/astronaut/.astroarch/systemd/x0vncserver.service /etc/systemd/system/x0vncserver.service
-ln -s /home/astronaut/.astroarch/systemd/resize_once.service /etc/systemd/system/resize_once.service
-ln -s /home/astronaut/.astroarch/configs/.astroarch.version /home/astronaut/.astroarch.version
+ln -sf /home/astronaut/.astroarch/configs/kde_settings.conf /etc/sddm.conf.d/kde_settings.conf
+ln -sf /home/astronaut/.astroarch/systemd/novnc.service /usr/lib/systemd/system/novnc.service
+ln -sf /home/astronaut/.astroarch/systemd/x0vncserver.service /etc/systemd/system/x0vncserver.service
+ln -sf /home/astronaut/.astroarch/systemd/resize_once.service /etc/systemd/system/resize_once.service
+ln -sf /home/astronaut/.astroarch/configs/.astroarch.version /home/astronaut/.astroarch.version
 
 # Copy xorg config
-cp /home/astronaut/.astroarch/configs/xorg.conf /etc/X11/
+cp -f /home/astronaut/.astroarch/configs/xorg.conf /etc/X11/
 
 # Copy v3d X config
-cp /home/astronaut/.astroarch/configs/99-v3d.conf /etc/X11/xorg.conf.d
+cp -f /home/astronaut/.astroarch/configs/99-v3d.conf /etc/X11/xorg.conf.d
 
 # Copy the polkit script to allow rebooting, shutting down with no errors
-cp /home/astronaut/.astroarch/configs/99-polkit-power.rules /etc/polkit-1/rules.d/
+cp -f /home/astronaut/.astroarch/configs/99-polkit-power.rules /etc/polkit-1/rules.d/
 
 # Copy the systemd unit to create the AP the first boot
-cp /home/astronaut/.astroarch/systemd/create_ap.service /etc/systemd/system/
+cp -f /home/astronaut/.astroarch/systemd/create_ap.service /etc/systemd/system/
 
 # Enable vncserver
 systemctl enable x0vncserver
 
 # Copy the config for kwinrc
-su astronaut -c "cp /home/astronaut/.astroarch/configs/kwinrc /home/astronaut/.config"
+su astronaut -c "cp -f /home/astronaut/.astroarch/configs/kwinrc /home/astronaut/.config"
 
 # Enable now all services
 systemctl enable sddm.service novnc.service dhcpcd.service NetworkManager.service avahi-daemon.service nmb.service smb.service
@@ -137,17 +143,17 @@ sed -i 's/%wheel ALL=(ALL:ALL) NOPASSWD: ALL/# %wheel ALL=(ALL:ALL) NOPASSWD: AL
 sed -i 's/# %wheel ALL=(ALL:ALL) ALL/%wheel ALL=(ALL:ALL) ALL/g' /etc/sudoers
 
 # Copy wallpapers
-su astronaut -c "cp /home/astronaut/.astroarch/wallpapers/bubble.jpg /home/astronaut/Pictures/wallpapers"
-su astronaut -c "cp /home/astronaut/.astroarch/wallpapers/south-milky.jpg /home/astronaut/Pictures/wallpapers"
-su astronaut -c "cp /home/astronaut/.astroarch/wallpapers/pacman.jpg /home/astronaut/Pictures/wallpapers"
+su astronaut -c "cp -f /home/astronaut/.astroarch/wallpapers/bubble.jpg /home/astronaut/Pictures/wallpapers"
+su astronaut -c "cp -f /home/astronaut/.astroarch/wallpapers/south-milky.jpg /home/astronaut/Pictures/wallpapers"
+su astronaut -c "cp -f /home/astronaut/.astroarch/wallpapers/pacman.jpg /home/astronaut/Pictures/wallpapers"
 
 # Copy desktop icons
-su astronaut -c "ln -s /usr/share/applications/org.kde.konsole.desktop /home/astronaut/Desktop/Konsole"
-su astronaut -c "ln -s /usr/share/applications/org.kde.kstars.desktop /home/astronaut/Desktop/Kstars"
-su astronaut -c "ln -s /usr/share/applications/astrodmx_capture.desktop /home/astronaut/Desktop/AstroDMx_capture"
+su astronaut -c "ln -sf /usr/share/applications/org.kde.konsole.desktop /home/astronaut/Desktop/Konsole"
+su astronaut -c "ln -sf /usr/share/applications/org.kde.kstars.desktop /home/astronaut/Desktop/Kstars"
+su astronaut -c "ln -sf /usr/share/applications/astrodmx_capture.desktop /home/astronaut/Desktop/AstroDMx_capture"
 
 # Remove actual novnc icons
-rm -r /usr/share/webapps/novnc/app/images/icons/*
+rm -rf /usr/share/webapps/novnc/app/images/icons/*
 
 # Copy custom novnc icons folder
 cp -r /home/astronaut/.astroarch/assets/icons/* /usr/share/webapps/novnc/app/images/icons
@@ -158,7 +164,7 @@ echo "127.0.0.1          localhost" >> /etc/hosts
 echo "127.0.1.1          astroarch" >> /etc/hosts
 
 # Copy the screensaver config, by default it is off
-su astronaut -c "cp /home/astronaut/.astroarch/configs/kscreenlockerrc /home/astronaut/.config/kscreenlockerrc"
+su astronaut -c "cp -f /home/astronaut/.astroarch/configs/kscreenlockerrc /home/astronaut/.config/kscreenlockerrc"
 
 # Set a standard TZ to avoid breaking plasma clock widget
 timedatectl set-timezone Europe/London
