@@ -30,21 +30,32 @@ su astronaut -c "git clone https://github.com/devDucks/astroarch.git /home/astro
 sed -i -e 's/#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/g' /etc/locale.gen
 locale-gen
 
-pacman -Syu base-devel pipewire-jack gnu-free-fonts wireplumber \
-        zsh plasma-desktop sddm networkmanager xf86-video-intel \
-	network-manager-applet networkmanager-qt5 chromium xorg konsole \
-	gpsd breeze-icons hicolor-icon-theme knewstuff5 tigervnc \
-	knotifyconfig5 kplotting5 qt5-datavis3d qt5-quickcontrols \
-	qt5-websockets qtkeychain stellarsolver xf86-video-fbdev \
-	xplanet plasma-nm dhcp dnsmasq kate plasma-systemmonitor \
-	dolphin uboot-tools usbutils cloud-guest-utils samba paru \
-	websockify novnc astrometry.net gsc kstars phd2 packagekit-qt5 \
-	indi-3rdparty-libs indi-3rdparty-drivers linux linux-headers \
-	i2c-tools indiserver-ui astro_dmx openssl-1.1 firefox chrony \
-	ksystemlog discover kwalletmanager kgpg qt5-serialbus \
-	qt5-serialport qt5ct udisks2-qt5 xorg-fonts-misc fuse2 \
-	fortune-mod cowsay pacman-contrib arandr neofetch \
-	astromonitor kscreen sddm-kcm flatpak --noconfirm --ask 4
+# Function to install packages and handle errors
+install_packages() {
+    for package in "$@"
+    do
+        if ! pacman -S --noconfirm --needed "$package"; then
+            echo "Error installing package: $package"
+        fi
+    done
+}
+
+# Install required packages
+install_packages base-devel pipewire-jack gnu-free-fonts wireplumber \
+    zsh plasma-desktop sddm networkmanager xf86-video-intel \
+    network-manager-applet networkmanager-qt chromium xorg-server konsole \
+    gpsd breeze-icons hicolor-icon-theme knewstuff tigervnc \
+    knotifyconfig kplotting qt5-datavisualization qt5-quickcontrols2 \
+    qt5-websockets qtkeychain stellarsolver xf86-video-fbdev \
+    xplanet plasma-nm dhclient dnsmasq kate plasma-systemmonitor \
+    dolphin uboot-tools usbutils cloud-guest-utils samba paru \
+    websockify novnc astrometry.net gsc kstars phd2 packagekit-qt5 \
+    indi-3rdparty indi-3rdparty-drivers linux linux-headers \
+    i2c-tools indiserver-ui astro-dmx-capture openssl firefox chrony \
+    ksystemlog discover kwalletmanager kgpg qt5-serialbus \
+    qt5-serialport qt5ct udisks2 xorg-fonts-misc fuse \
+    fortune-mod cowsay pacman-contrib arandr neofetch \
+    astromonitor kscreen sddm-kcm flatpak
 
 # Allow wheelers to sudo without password to install packages
 sed -i 's/# %wheel ALL=(ALL:ALL) NOPASSWD: ALL/%wheel ALL=(ALL:ALL) NOPASSWD: ALL/g' /etc/sudoers
@@ -66,7 +77,7 @@ su astronaut -c "mkdir -p /home/astronaut/.config"
 su astronaut -c "mkdir -p /home/astronaut/Pictures/wallpapers"
 su astronaut -c "mkdir -p /home/astronaut/Desktop"
 
-# install oh-my-zsh and set the default shell to zsh
+# Install oh-my-zsh and set the default shell to zsh
 chsh -s /usr/bin/zsh astronaut
 rm /home/astronaut/.bash*
 cd /home/astronaut
