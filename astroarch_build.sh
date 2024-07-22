@@ -136,7 +136,7 @@ systemctl enable x0vncserver
 su astronaut -c "cp -f /home/astronaut/.astroarch/configs/kwinrc /home/astronaut/.config"
 
 # Enable now all services
-systemctl enable sddm.service novnc.service dhcpcd.service NetworkManager.service avahi-daemon.service nmb.service smb.service
+systemctl enable sddm.service novnc.service NetworkManager.service avahi-daemon.service nmb.service smb.service
 
 # Take sudoers to the original state
 sed -i 's/%wheel ALL=(ALL:ALL) NOPASSWD: ALL/# %wheel ALL=(ALL:ALL) NOPASSWD: ALL/g' /etc/sudoers
