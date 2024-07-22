@@ -11,15 +11,15 @@ sed -i 's|#ParallelDownloads = 5|ParallelDownloads=5\nILoveCandy\n|g' /etc/pacma
 sed -i 's|\[core\]|\[astromatto\]\nSigLevel = Optional TrustAll\nServer = http://astroarch.astromatto.com:9000/$arch\n\n\[core\]|' /etc/pacman.conf
 
 # Bootstrap pacman-key
-pacman-key --init && pacman-key --populate archlinuxarm
+pacman-key --init && pacman-key --populate archlinux
 
 # Update all packages now
 pacman -Syu --noconfirm
 
-# Install just 2 packages for the next actions
+# Install necessary packages for the next actions
 pacman -S wget sudo git --noconfirm
 
-# create user astro with home, add it to wheel
+# Create user astronaut with home, add it to wheel
 useradd -G wheel -m astronaut
 echo "astronaut:astro" | chpasswd
 
@@ -31,7 +31,7 @@ sed -i -e 's/#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/g' /etc/locale.gen
 locale-gen
 
 pacman -Syu base-devel pipewire-jack gnu-free-fonts wireplumber \
-        zsh plasma-desktop sddm networkmanager xf86-video-dummy \
+        zsh plasma-desktop sddm networkmanager xf86-video-intel \
 	network-manager-applet networkmanager-qt5 chromium xorg konsole \
 	gpsd breeze-icons hicolor-icon-theme knewstuff5 tigervnc \
 	knotifyconfig5 kplotting5 qt5-datavis3d qt5-quickcontrols \
@@ -39,7 +39,7 @@ pacman -Syu base-devel pipewire-jack gnu-free-fonts wireplumber \
 	xplanet plasma-nm dhcp dnsmasq kate plasma-systemmonitor \
 	dolphin uboot-tools usbutils cloud-guest-utils samba paru \
 	websockify novnc astrometry.net gsc kstars phd2 packagekit-qt5 \
-	indi-3rdparty-libs indi-3rdparty-drivers linux-rpi linux-rpi-headers \
+	indi-3rdparty-libs indi-3rdparty-drivers linux linux-headers \
 	i2c-tools indiserver-ui astro_dmx openssl-1.1 firefox chrony \
 	ksystemlog discover kwalletmanager kgpg qt5-serialbus \
 	qt5-serialport qt5ct udisks2-qt5 xorg-fonts-misc fuse2 \
@@ -141,7 +141,7 @@ rm -r /usr/share/webapps/novnc/app/images/icons/*
 # Copy custom novnc icons folder
 cp -r /home/astronaut/.astroarch/assets/icons/* /usr/share/webapps/novnc/app/images/icons
 
-# config hostnames
+# Config hostnames
 echo "astroarch" > /etc/hostname
 echo "127.0.0.1          localhost" >> /etc/hosts
 echo "127.0.1.1          astroarch" >> /etc/hosts
@@ -151,23 +151,6 @@ su astronaut -c "cp /home/astronaut/.astroarch/configs/kscreenlockerrc /home/ast
 
 # Set a standard TZ to avoid breaking plasma clock widget
 timedatectl set-timezone Europe/London
-
-# If we are on a raspberry let's adjust /boot/config.txt
-echo dtparam=i2c_arm=on >> /boot/config.txt
-echo dtparam=audio=on >> /boot/config.txt
-echo disable_overscan=1 >> /boot/config.txt
-echo gpu_mem=256 >> /boot/config.txt
-echo disable_splash=1 >> /boot/config.txt
-echo 3dtparam=krnbt=on >> /boot/config.txt
-echo hdmi_drive=2 >> /boot/config.txt
-echo dtoverlay=i2c-rtc >> /boot/config.txt
-echo i2c-dev > /etc/modules-load.d/raspberrypi.conf
-sed -i 's/dtoverlay=vc4-kms-v3d/dtoverlay=vc4-fkms-v3d/g' /boot/config.txt
-sed -i 's/max_framebuffers=2/max_framebuffers=2\nframebuffer_depth=24/g' /boot/config.txt
-
-# Pi5 only settings should go here
-echo [pi5] >> /boot/config.txt
-echo dtparam=rtc_bbat_vchg=3000000 >> /boot/config.txt
 
 # Disable Kwallet by default
 su astronaut -c "echo $'[Wallet]\nEnabled=false' > /home/astronaut/.config/kwalletrc"
